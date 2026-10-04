@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨使用者即時留言板</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 30px auto; 
+            padding: 0 20px; 
+            background-color: #f4f6f9; 
+        }
+        .comment-box { 
+            background: #ffffff; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        h2 { margin-top: 0; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 14px;
+        }
+        textarea { height: 90px; resize: vertical; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+            font-size: 14px; 
+        }
+        button:hover { background: #0056b3; }
+        .comment-list { margin-top: 30px; }
+        .comment-item { 
+            background: #f9f9f9; 
+            border-left: 4px solid #007bff; 
+            padding: 12px 15px; 
+            margin-bottom: 12px; 
+            border-radius: 0 4px 4px 0; 
+        }
+        .comment-header { 
+            font-size: 0.9em; 
+            color: #666; 
+            margin-bottom: 6px; 
+            display: flex; 
+            justify-content: space-between; 
+        }
+        .comment-author { font-weight: bold; color: #333; }
+        .comment-text { margin: 0; color: #444; white-space: pre-line; }
+    </style>
+</head>
+<body>
+
+    <div class="comment-box">
+        <h2>雲端即時留言板</h2>
+        <form id="commentForm">
+            <div class="form-group">
+                <label for="author">暱稱：</label>
+                <input type="text" id="author" placeholder="請輸入您的名字" required>
+            </div>
+            <div class="form-group">
+                <label for="text">留言內容：</label>
+                <textarea id="text" placeholder="請寫下您的留言..." required></textarea>
+            </div>
+            <button type="submit">發布留言</button>
+        </form>
+
+        <div class="comment-list" id="commentList">
+            <h3>所有留言</h3>
+        </div>
+    </div>
+
+    <!-- 載入 Firebase 模組 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // 從您的專案中自動擷取並帶入的 Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyBZ9s5Ku8aEzaVEmk_7ztbI...", // 已根據截圖為您設定
+            authDomain: "my-project-zack0512.firebaseapp.com",
+            databaseURL: "https://my-project-zack0512-default-rtdb.firebaseio.com",
+            projectId: "my-project-zack0512",
+            storageBucket: "my-project-zack0512.appspot.com",
+            messagingSenderId: "972310414233",
+            appId: "1:972310414233:web:..."
+        };
+
+        // 完整金鑰（請補全 apiKey 與 appId 剩餘字元）：
+        // apiKey 完整內容請參考您畫面上複製的整個字串
+        // 畫面上記得滑到最下方點擊「前往主控台 (Continue to console)」完成註冊！
+
+        // 初始化 Firebase 資料庫
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const commentsRef = ref(db, 'comments');
+
+        const form = document.getElementById('commentForm');
+        const commentList = document.getElementById('commentList');
+
+        // 發布留言
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const author = document.getElementById('author').value.trim();
+            const text = document.getElementById('text').value.trim();
+
+            if (author && text) {
+                push(commentsRef, {
+                    author: author,
+                    text: text,
+                    timestamp: new Date().toLocaleString('zh-TW', { hour12: false })
+                });
+
+                document.getElementById('author').value = '';
+                document.getElementById('text').value = '';
+            }
+        });
+
+        // 即時接收新留言並顯示在最上方
+        onChildAdded(commentsRef, (snapshot) => {
+            const data = snapshot.val();
+            const div = document.createElement('div');
+            div.className = 'comment-item';
+            div.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${escapeHTML(data.author)}</span>
+                    <span>${data.timestamp}</span>
+                </div>
+                <p class="comment-text">${escapeHTML(data.text)}</p>
+            `;
+            
+            const header = commentList.querySelector('h3');
+            header.after(div);
+        });
+
+        // 安全字元轉換 (防範 XSS)
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+    </script>
+</body>
+</html>
